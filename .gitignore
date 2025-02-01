@@ -1,0 +1,11 @@
+# 配置文件
+config.ini
+
+# Windows
+desktop.ini
+Thumbs.db
+ehthumbs.db
+
+# AutoHotkey
+*.exe
+*.ahk.bak 

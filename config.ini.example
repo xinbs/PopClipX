@@ -1,0 +1,4 @@
+# DeepSeek API 配置
+# 请将此文件重命名为 config.ini 并填入您的 API Key
+# 获取 API Key: https://platform.deepseek.com/
+YOUR_DEEPSEEK_API_KEY 
