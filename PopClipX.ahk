@@ -35,7 +35,6 @@ ver:="1.0.0"
 fontSize:=12
 fontFamily:="微软雅黑"
 userLanguage:="zh-CN"
-SyncPath:="E:\Dropbox"
 SysGet, VirtualWidth, 78
 SysGet, VirtualHeight, 79
 
@@ -257,16 +256,6 @@ Copy:
     
     ; 直接设置剪贴板内容
     Clipboard := selectText
-    
-    If (FileExist(SyncPath))
-    {
-        FileSetAttrib, -R, %SyncPath%\WinPopclip
-        FileDelete, %SyncPath%\WinPopclip
-        FileAppend,
-        (
-%selectText%
-        ), %SyncPath%\WinPopclip
-    }
 Return
 
 Cut:
