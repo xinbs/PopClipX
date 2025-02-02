@@ -15,7 +15,7 @@ Windows 下的 PopClip，基于 AutoHotkey 实现。
 2. 下载本项目
 3. 复制 `config.ini.example` 为 `config.ini`
 4. 配置 DeepSeek API Key（可选，用于翻译功能）
-5. 运行 `WinPopClip.ahk`
+5. 运行 `PopClipX.ahk`
 
 ## 配置说明
 
