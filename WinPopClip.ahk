@@ -40,9 +40,7 @@ SysGet, VirtualWidth, 78
 SysGet, VirtualHeight, 79
 
 ; 从配置文件读取应用列表模式和列表
-IniRead, listMode, %A_ScriptDir%\config.ini, AppList, mode, whitelist
 IniRead, whiteListApps, %A_ScriptDir%\config.ini, WhiteList, apps
-IniRead, blackListApps, %A_ScriptDir%\config.ini, BlackList, apps
 
 ; 设置菜单
 Menu, tray, NoStandard
@@ -63,71 +61,18 @@ if (whiteListApps != "ERROR") {
     }
 }
 
-; 创建黑名单组
-if (blackListApps != "ERROR") {
-    Loop, Parse, blackListApps, `,, %A_Space%%A_Tab%
-    {
-        if (A_LoopField != "") {
-            GroupAdd, blackList, ahk_exe %A_LoopField%
-        }
-    }
-}
+; 白名单模式的热键定义
+#IfWinNotActive ahk_group whiteList
+~LButton::
+    Gui,Destroy
+Return
+#IfWinNotActive
 
-; 根据模式设置不同的热键
-if (listMode == "whitelist") {
-    ; 白名单模式的热键定义
-    #IfWinNotActive ahk_group whiteList
-    ~LButton::
-        Gui,Destroy
-    Return
-    #IfWinNotActive
-
-    #IfWinActive ahk_group whiteList
-    $LButton::
-        HandleMouseClick()
-    Return
-    #IfWinActive
-} else {
-    ; 黑名单模式的热键定义
-    #If WinActive("ahk_group blackList")
-    $LButton::
-        Send, {LButton Down}
-        KeyWait, LButton
-        Send, {LButton Up}
-    Return
-    #If
-
-    #If !WinActive("ahk_group blackList")
-    $LButton::
-        HandleMouseClick()
-    Return
-    #If
-}
-
-; 处理鼠标点击的函数
-HandleMouseClick() {
-    global winTitle, winClipToggle
-    ; 获得鼠标当前坐标
-    MouseGetPos, perPosX, perPosY
-    ; 获得当前时间
-    preTime:=A_TickCount
-    If (A_Cursor="IBeam")
-        winClipToggle:=1
-
-    Send, {LButton Down}
-    KeyWait, LButton
-
-    Send, {LButton Up}
-
-    If (A_Cursor="IBeam")
-        winClipToggle:=1
-
-    If !WinActive(winTitle)
-    {
-        win:= WinExist("A")
-        ShowMainGui(perPosX,perPosY,preTime) 
-    }
-}
+#IfWinActive ahk_group whiteList
+$LButton::
+    HandleMouseClick()
+Return
+#IfWinActive
 
 ; 菜单处理函数
 ReloadScrit:
@@ -509,4 +454,29 @@ UriEncode(Uri, Mode := 0, RE="[0-9A-Za-z]"){
     If (Mode==1)
         Res:=StrReplace(Res, "%2F", "%5C%2F")
 Return,Res
+}
+
+; 处理鼠标点击的函数
+HandleMouseClick() {
+    global winTitle, winClipToggle
+    ; 获得鼠标当前坐标
+    MouseGetPos, perPosX, perPosY
+    ; 获得当前时间
+    preTime:=A_TickCount
+    If (A_Cursor="IBeam")
+        winClipToggle:=1
+
+    Send, {LButton Down}
+    KeyWait, LButton
+
+    Send, {LButton Up}
+
+    If (A_Cursor="IBeam")
+        winClipToggle:=1
+
+    If !WinActive(winTitle)
+    {
+        win:= WinExist("A")
+        ShowMainGui(perPosX,perPosY,preTime) 
+    }
 } 
