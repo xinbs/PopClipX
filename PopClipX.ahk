@@ -217,6 +217,9 @@ ShowWinclip()
             Gui, Add, Button, x+0 yp hp -Wrap vcopy gCopy, ` ` 复制` ` ` 
         }
         Gui, Add, Button, x+0 yp hp -Wrap vaiTranslate gDeepSeekTranslate, ` ` 翻译` ` ` 
+        Gui, Add, Button, x+0 yp hp -Wrap vaiAsk gDeepSeekAsk, ` ❓` ` 
+        Gui, Add, Button, x+0 yp hp -Wrap vaiRewrite gDeepSeekRewrite, ` ✍` ` 
+        Gui, Add, Button, x+0 yp hp -Wrap vaiGrammar gDeepSeekGrammar, ` 📝` ` 
     }
 
     Gui, font
@@ -368,66 +371,67 @@ DeepSeekTranslateText(text) {
     }
 }
 
-ShowTranslationResult(translatedText) {
-    global bGColor, fontColor, fontSize, fontFamily, controlHight, winHeightPx, VirtualWidth, dpiRatio
+ShowTranslationResult(text) {
+    static
     
-    ; 创建新的GUI窗口
-    Gui, TransResult:Destroy  ; 确保先销毁已存在的窗口
-    Gui, TransResult:New, +ToolWindow -Caption +AlwaysOnTop +Owner
-    Gui, TransResult:Color, %bGColor%
-    
-    ; 设置字体
-    Gui, TransResult:Font, s%fontSize% c%fontColor%, %fontFamily%
-    
-    ; 添加一个不可见的文本控件用于初始定位
-    Gui, TransResult:Add, Text, x0 y0 w0 h%controlHight% -Wrap,
-    
-    ; 添加翻译结果显示（增加宽度和高度）
-    Gui, TransResult:Add, Edit, x10 y5 w500 h120 vtranslatedTextEdit ReadOnly -WantReturn +Multi, %translatedText%
-    
-    ; 添加按钮（使用较小的按钮，并调整位置）
-    buttonHeight := 25
-    Gui, TransResult:Add, Button, x10 y+8 w60 h%buttonHeight% gCopyTransResult, 复制
-    Gui, TransResult:Add, Button, x+10 yp w60 h%buttonHeight% gCloseTransResult, 关闭
+    ; 处理换行，将 \n 转换为实际换行
+    text := StrReplace(text, "\n", "`n")
     
     ; 获取鼠标位置
     MouseGetPos, mouseX, mouseY
     
-    ; 获取主屏幕尺寸
-    SysGet, MonitorPrimary, MonitorPrimary
-    SysGet, MonitorWorkArea, MonitorWorkArea, %MonitorPrimary%
+    ; 获取当前显示器的工作区
+    SysGet, MonitorWorkArea, MonitorWorkArea
     
-    ; 计算窗口尺寸
-    windowWidth := 520  ; 500 + 边距
-    windowHeight := 160  ; 120 + 按钮高度 + 边距
+    ; 设置窗口大小
+    windowWidth := 450  ; 固定宽度
+    windowHeight := 350  ; 固定高度
+    editWidth := windowWidth - 20  ; 编辑框宽度（考虑边距）
     
-    ; 计算窗口位置，确保在屏幕内
-    winX := mouseX - windowWidth/2
-    winY := mouseY - windowHeight - 20  ; 在鼠标上方显示
+    ; 创建GUI
+    Gui, TransResult:New
+    Gui, TransResult:+AlwaysOnTop
     
-    ; 确保窗口不会超出屏幕边界
+    ; 设置字体
+    Gui, TransResult:Font, s10, Microsoft YaHei
+    
+    ; 添加编辑框，启用自动换行和垂直滚动条
+    Gui, TransResult:Add, Edit, x10 y10 w%editWidth% h%windowHeight% vtranslatedTextEdit ReadOnly +Multi +VScroll +Wrap, %text%
+    
+    ; 添加复制和关闭按钮
+    buttonY := windowHeight + 10
+    buttonWidth := 80
+    Gui, TransResult:Add, Button, x10 y%buttonY% w%buttonWidth% gCopyTransResult, 复制
+    Gui, TransResult:Add, Button, x+10 y%buttonY% w%buttonWidth% gCloseTransResult, 关闭
+    
+    ; 计算窗口位置
+    winX := mouseX
+    winY := mouseY - windowHeight - 50  ; 默认显示在鼠标上方
+    
+    ; 确保窗口在屏幕范围内
     if (winX + windowWidth > MonitorWorkAreaRight)
         winX := MonitorWorkAreaRight - windowWidth
     if (winX < MonitorWorkAreaLeft)
         winX := MonitorWorkAreaLeft
         
-    if (winY + windowHeight > MonitorWorkAreaBottom)
-        winY := MonitorWorkAreaBottom - windowHeight
+    if (winY + windowHeight + 50 > MonitorWorkAreaBottom)  ; 50是按钮区域的高度
+        winY := MonitorWorkAreaBottom - windowHeight - 50
     if (winY < MonitorWorkAreaTop)
         winY := mouseY + 20  ; 如果上方放不下，就放在鼠标下方
     
     ; 显示窗口
-    Gui, TransResult:Show, x%winX% y%winY% w%windowWidth% h%windowHeight%, 翻译结果
+    totalHeight := windowHeight + 45  ; 窗口总高度包括按钮区域
+    Gui, TransResult:Show, x%winX% y%winY% w%windowWidth% h%totalHeight%, 结果
 }
 
 CopyTransResult:
-    Gui, TransResult:Submit, NoHide
-    Clipboard := translatedTextEdit
-    Gui, TransResult:Destroy
+Gui, TransResult:Submit, NoHide
+GuiControlGet, Clipboard,, translatedTextEdit
+Gui, TransResult:Destroy
 Return
 
 CloseTransResult:
-    Gui, TransResult:Destroy
+Gui, TransResult:Destroy
 Return
 
 ; from http://the-automator.com/parse-url-parameters/
@@ -465,5 +469,275 @@ HandleMouseClick() {
     {
         win:= WinExist("A")
         ShowMainGui(perPosX,perPosY,preTime) 
+    }
+}
+
+DeepSeekAsk:
+    Gui, Destroy
+    result := DeepSeekAskText(selectText)
+    ShowTranslationResult(result)
+Return
+
+DeepSeekAskText(text) {
+    ; 从配置文件读取 API Key
+    IniRead, apiKey, %A_ScriptDir%\config.ini, DeepSeek, apiKey
+    if (apiKey = "ERROR" || apiKey = "") {
+        MsgBox, 请在 config.ini 文件中正确设置您的 DeepSeek API Key`n格式：apiKey=YOUR_API_KEY
+        return "请先配置 API Key"
+    }
+    
+    ; 清理 API Key（移除可能的空白字符和换行符）
+    apiKey := RegExReplace(apiKey, "[\s\r\n]+")
+    if (apiKey = "") {
+        MsgBox, API Key 格式不正确，请检查 config.ini 文件
+        return "API Key 格式不正确"
+    }
+    
+    ; 创建 HTTP 请求
+    try {
+        whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+        url := "https://api.deepseek.com/v1/chat/completions"
+        whr.Open("POST", url, true)
+        
+        ; 设置请求头
+        try {
+            whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+            whr.SetRequestHeader("Authorization", "Bearer " . apiKey)
+            whr.SetRequestHeader("Accept", "application/json; charset=utf-8")
+        } catch e {
+            return "设置请求头失败：" . e.what . " " . e.message
+        }
+        
+        whr.Option(9) := 2048  ; 强制使用 UTF-8
+        whr.Option(6) := false ; 禁用重定向
+        
+        ; 准备问答提示词
+        systemPrompt := "你现在是一个百科全书，请用简洁的中文解释这个问题"
+        
+        ; 转义特殊字符
+        text := StrReplace(text, "\", "\\")
+        text := StrReplace(text, """", "\""")
+        text := StrReplace(text, "`n", "\n")
+        text := StrReplace(text, "`r", "\r")
+        text := StrReplace(text, "`t", "\t")
+        
+        ; 准备请求数据
+        postData := "{""model"":""deepseek-chat"",""messages"":[{""role"":""system"",""content"":""" . systemPrompt . """},{""role"":""user"",""content"":""" . text . """}],""temperature"":0.3}"
+        
+        ; 发送请求
+        whr.Send(postData)
+        whr.WaitForResponse()
+        
+        ; 获取原始响应
+        responseBody := whr.ResponseBody
+        ; 将响应体转换为文本
+        ADO := ComObjCreate("ADODB.Stream")
+        ADO.Type := 1  ; 二进制
+        ADO.Mode := 3  ; 读写
+        ADO.Open()
+        ADO.Write(responseBody)
+        ADO.Position := 0
+        ADO.Type := 2  ; 文本
+        ADO.Charset := "UTF-8"
+        response := ADO.ReadText()
+        ADO.Close()
+        
+        ; 检查响应状态码
+        status := whr.Status
+        if (status != 200) {
+            return "问答请求失败：HTTP状态码 " . status . "`n响应内容：" . response
+        }
+        
+        ; 解析 JSON 响应
+        RegExMatch(response, """content"":\s*""(.+?)""[,}]", match)
+        
+        if (match1) {
+            ; 直接返回匹配到的内容，不做任何处理
+            return match1
+        } else {
+            return "问答失败，未能解析API响应：" . response
+        }
+    } catch e {
+        return "问答请求失败：" . e.what . " " . e.message . "`n" . e.extra
+    }
+}
+
+DeepSeekRewrite:
+    Gui, Destroy
+    result := DeepSeekRewriteText(selectText)
+    ShowTranslationResult(result)
+Return
+
+DeepSeekRewriteText(text) {
+    ; 从配置文件读取 API Key
+    IniRead, apiKey, %A_ScriptDir%\config.ini, DeepSeek, apiKey
+    if (apiKey = "ERROR" || apiKey = "") {
+        MsgBox, 请在 config.ini 文件中正确设置您的 DeepSeek API Key`n格式：apiKey=YOUR_API_KEY
+        return "请先配置 API Key"
+    }
+    
+    ; 清理 API Key（移除可能的空白字符和换行符）
+    apiKey := RegExReplace(apiKey, "[\s\r\n]+")
+    if (apiKey = "") {
+        MsgBox, API Key 格式不正确，请检查 config.ini 文件
+        return "API Key 格式不正确"
+    }
+    
+    ; 创建 HTTP 请求
+    try {
+        whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+        url := "https://api.deepseek.com/v1/chat/completions"
+        whr.Open("POST", url, true)
+        
+        ; 设置请求头
+        try {
+            whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+            whr.SetRequestHeader("Authorization", "Bearer " . apiKey)
+            whr.SetRequestHeader("Accept", "application/json; charset=utf-8")
+        } catch e {
+            return "设置请求头失败：" . e.what . " " . e.message
+        }
+        
+        whr.Option(9) := 2048  ; 强制使用 UTF-8
+        whr.Option(6) := false ; 禁用重定向
+        
+        ; 准备重写提示词
+        systemPrompt := "你现在是一个专业的文本重写助手。请将以下文本重写为更简洁或更丰富的表达方式。"
+        
+        ; 转义特殊字符
+        text := StrReplace(text, "\", "\\")
+        text := StrReplace(text, """", "\""")
+        text := StrReplace(text, "`n", "\n")
+        text := StrReplace(text, "`r", "\r")
+        text := StrReplace(text, "`t", "\t")
+        
+        ; 准备请求数据
+        postData := "{""model"":""deepseek-chat"",""messages"":[{""role"":""system"",""content"":""" . systemPrompt . """},{""role"":""user"",""content"":""" . text . """}],""temperature"":0.3}"
+        
+        ; 发送请求
+        whr.Send(postData)
+        whr.WaitForResponse()
+        
+        ; 获取原始响应
+        responseBody := whr.ResponseBody
+        ; 将响应体转换为文本
+        ADO := ComObjCreate("ADODB.Stream")
+        ADO.Type := 1  ; 二进制
+        ADO.Mode := 3  ; 读写
+        ADO.Open()
+        ADO.Write(responseBody)
+        ADO.Position := 0
+        ADO.Type := 2  ; 文本
+        ADO.Charset := "UTF-8"
+        response := ADO.ReadText()
+        ADO.Close()
+        
+        ; 检查响应状态码
+        status := whr.Status
+        if (status != 200) {
+            return "重写请求失败：HTTP状态码 " . status . "`n响应内容：" . response
+        }
+        
+        ; 解析 JSON 响应
+        RegExMatch(response, """content"":\s*""(.+?)""[,}]", match)
+        
+        if (match1) {
+            ; 直接返回匹配到的内容，不做任何处理
+            return match1
+        } else {
+            return "重写失败，未能解析API响应：" . response
+        }
+    } catch e {
+        return "重写请求失败：" . e.what . " " . e.message . "`n" . e.extra
+    }
+}
+
+DeepSeekGrammar:
+    Gui, Destroy
+    result := DeepSeekGrammarText(selectText)
+    ShowTranslationResult(result)
+Return
+
+DeepSeekGrammarText(text) {
+    ; 从配置文件读取 API Key
+    IniRead, apiKey, %A_ScriptDir%\config.ini, DeepSeek, apiKey
+    if (apiKey = "ERROR" || apiKey = "") {
+        MsgBox, 请在 config.ini 文件中正确设置您的 DeepSeek API Key`n格式：apiKey=YOUR_API_KEY
+        return "请先配置 API Key"
+    }
+    
+    ; 清理 API Key（移除可能的空白字符和换行符）
+    apiKey := RegExReplace(apiKey, "[\s\r\n]+")
+    if (apiKey = "") {
+        MsgBox, API Key 格式不正确，请检查 config.ini 文件
+        return "API Key 格式不正确"
+    }
+    
+    ; 创建 HTTP 请求
+    try {
+        whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+        url := "https://api.deepseek.com/v1/chat/completions"
+        whr.Open("POST", url, true)
+        
+        ; 设置请求头
+        try {
+            whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+            whr.SetRequestHeader("Authorization", "Bearer " . apiKey)
+            whr.SetRequestHeader("Accept", "application/json; charset=utf-8")
+        } catch e {
+            return "设置请求头失败：" . e.what . " " . e.message
+        }
+        
+        whr.Option(9) := 2048  ; 强制使用 UTF-8
+        whr.Option(6) := false ; 禁用重定向
+        
+        ; 准备语法检查提示词
+        systemPrompt := "你现在是一位专业的英语语法专家。请检查以下英文文本是否有语法错误或者是单词拼写错误。如果有错误，请直接返回修正后的文本；如果没有错误，请直接返回原文。不需要解释。待检查内容是："
+        
+        ; 转义特殊字符
+        text := StrReplace(text, "\", "\\")
+        text := StrReplace(text, """", "\""")
+        text := StrReplace(text, "`n", "\n")
+        text := StrReplace(text, "`r", "\r")
+        text := StrReplace(text, "`t", "\t")
+        
+        ; 准备请求数据
+        postData := "{""model"":""deepseek-chat"",""messages"":[{""role"":""system"",""content"":""" . systemPrompt . """},{""role"":""user"",""content"":""" . text . """}],""temperature"":0.1}"
+        
+        ; 发送请求
+        whr.Send(postData)
+        whr.WaitForResponse()
+        
+        ; 获取原始响应
+        responseBody := whr.ResponseBody
+        ; 将响应体转换为文本
+        ADO := ComObjCreate("ADODB.Stream")
+        ADO.Type := 1  ; 二进制
+        ADO.Mode := 3  ; 读写
+        ADO.Open()
+        ADO.Write(responseBody)
+        ADO.Position := 0
+        ADO.Type := 2  ; 文本
+        ADO.Charset := "UTF-8"
+        response := ADO.ReadText()
+        ADO.Close()
+        
+        ; 检查响应状态码
+        status := whr.Status
+        if (status != 200) {
+            return "语法检查请求失败：HTTP状态码 " . status . "`n响应内容：" . response
+        }
+        
+        ; 解析 JSON 响应
+        RegExMatch(response, """content"":\s*""(.+?)""[,}]", match)
+        
+        if (match1) {
+            ; 直接返回匹配到的内容，不做任何处理
+            return match1
+        } else {
+            return "语法检查失败，未能解析API响应：" . response
+        }
+    } catch e {
+        return "语法检查请求失败：" . e.what . " " . e.message . "`n" . e.extra
     }
 } 
