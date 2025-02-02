@@ -1,0 +1,10 @@
+# DeepSeek API 配置
+# 请将此文件重命名为 config.ini 并填入您的 API Key
+# 获取 API Key: https://platform.deepseek.com/
+
+[DeepSeek]
+apiKey=YOUR_API_KEY
+
+[WhiteList]
+# 白名单：只有列表中的应用程序启用功能（逗号分隔）
+apps=115chrome.exe,Acrobat.exe,battle.net.exe,bcompare.exe,chrome.exe,code.exe,dreamweaver.exe,emeditor.exe,explorer.exe,firefox.exe,iexplore.exe,keygen.exe,mailspring.exe,microsoftedge.exe,microsoftedgecp.exe,msedge.exe,notepad++.exe,notepad.exe,opera.exe,poedit.exe,qq.exe,steam.exe,steamwebhelper.exe,tim.exe,vivaldi.exe,wechat.exe,wechatstore.exe,wechatweb.exe,word.exe 
