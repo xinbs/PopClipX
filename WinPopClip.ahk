@@ -39,11 +39,12 @@ SyncPath:="E:\Dropbox"
 SysGet, VirtualWidth, 78
 SysGet, VirtualHeight, 79
 
-Loop, read, %A_ScriptDir%/White List.txt
-{
-    GroupAdd, whiteList, ahk_exe %A_LoopReadLine%
-}
+; 从配置文件读取应用列表模式和列表
+IniRead, listMode, %A_ScriptDir%\config.ini, AppList, mode, whitelist
+IniRead, whiteListApps, %A_ScriptDir%\config.ini, WhiteList, apps
+IniRead, blackListApps, %A_ScriptDir%\config.ini, BlackList, apps
 
+; 设置菜单
 Menu, tray, NoStandard
 Menu, tray, add, 更新 | Ver %ver%, UpdateScrit
 Menu, tray, add, 反馈 | Issues, Issues
@@ -51,39 +52,61 @@ Menu, tray, add, 反馈 | Issues, Issues
 Menu, tray, add
 Menu, tray, add, 重置 | Reload, ReloadScrit
 Menu, tray, add, 退出 | Exit, ExitScrit
-Return
 
-ReloadScrit:
-    Reload
-Return
+; 创建白名单组
+if (whiteListApps != "ERROR") {
+    Loop, Parse, whiteListApps, `,, %A_Space%%A_Tab%
+    {
+        if (A_LoopField != "") {
+            GroupAdd, whiteList, ahk_exe %A_LoopField%
+        }
+    }
+}
 
-PauseScrit:
-    Pause, Toggle, 1
-Return
+; 创建黑名单组
+if (blackListApps != "ERROR") {
+    Loop, Parse, blackListApps, `,, %A_Space%%A_Tab%
+    {
+        if (A_LoopField != "") {
+            GroupAdd, blackList, ahk_exe %A_LoopField%
+        }
+    }
+}
 
-UpdateScrit:
-    Run, https://github.com/xinbs/PopClipX/releases
-Return
+; 根据模式设置不同的热键
+if (listMode == "whitelist") {
+    ; 白名单模式的热键定义
+    #IfWinNotActive ahk_group whiteList
+    ~LButton::
+        Gui,Destroy
+    Return
+    #IfWinNotActive
 
-Issues:
-    Run, https://github.com/xinbs/PopClipX/issues
-Return
+    #IfWinActive ahk_group whiteList
+    $LButton::
+        HandleMouseClick()
+    Return
+    #IfWinActive
+} else {
+    ; 黑名单模式的热键定义
+    #If WinActive("ahk_group blackList")
+    $LButton::
+        Send, {LButton Down}
+        KeyWait, LButton
+        Send, {LButton Up}
+    Return
+    #If
 
-ExitScrit:
-^#p::
-ExitApp
-Return
+    #If !WinActive("ahk_group blackList")
+    $LButton::
+        HandleMouseClick()
+    Return
+    #If
+}
 
-#IfWinNotActive, ahk_group whiteList
-~LButton::
-    Gui,Destroy
-Return
-#IfWinNotActive
-
-#IfWinActive, ahk_group whiteList
-    ; 如果不在脚本界面状态下
-$LButton::
-    ; ToolTip, %win% %A_TickCount%, 0,0
+; 处理鼠标点击的函数
+HandleMouseClick() {
+    global winTitle, winClipToggle
     ; 获得鼠标当前坐标
     MouseGetPos, perPosX, perPosY
     ; 获得当前时间
@@ -104,8 +127,29 @@ $LButton::
         win:= WinExist("A")
         ShowMainGui(perPosX,perPosY,preTime) 
     }
+}
+
+; 菜单处理函数
+ReloadScrit:
+    Reload
 Return
-#IfWinActive
+
+PauseScrit:
+    Pause, Toggle, 1
+Return
+
+UpdateScrit:
+    Run, https://github.com/xinbs/PopClipX/releases
+Return
+
+Issues:
+    Run, https://github.com/xinbs/PopClipX/issues
+Return
+
+ExitScrit:
+^#p::
+ExitApp
+Return
 
 ShowMainGui(perPosX,perPosY,preTime)
 {
@@ -310,10 +354,17 @@ Return
 
 DeepSeekTranslateText(text) {
     ; 从配置文件读取 API Key
-    FileRead, apiKey, %A_ScriptDir%\config.ini
-    if (apiKey = "") {
-        MsgBox, 请在 config.ini 文件中设置您的 DeepSeek API Key
+    IniRead, apiKey, %A_ScriptDir%\config.ini, DeepSeek, apiKey
+    if (apiKey = "ERROR" || apiKey = "") {
+        MsgBox, 请在 config.ini 文件中正确设置您的 DeepSeek API Key`n格式：apiKey=YOUR_API_KEY
         return "请先配置 API Key"
+    }
+    
+    ; 清理 API Key（移除可能的空白字符和换行符）
+    apiKey := RegExReplace(apiKey, "[\s\r\n]+")
+    if (apiKey = "") {
+        MsgBox, API Key 格式不正确，请检查 config.ini 文件
+        return "API Key 格式不正确"
     }
     
     ; 创建 HTTP 请求
@@ -321,9 +372,16 @@ DeepSeekTranslateText(text) {
         whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
         url := "https://api.deepseek.com/v1/chat/completions"
         whr.Open("POST", url, true)
-        whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
-        whr.SetRequestHeader("Authorization", "Bearer " . apiKey)
-        whr.SetRequestHeader("Accept", "application/json; charset=utf-8")
+        
+        ; 设置请求头
+        try {
+            whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+            whr.SetRequestHeader("Authorization", "Bearer " . apiKey)
+            whr.SetRequestHeader("Accept", "application/json; charset=utf-8")
+        } catch e {
+            return "设置请求头失败：" . e.what . " " . e.message
+        }
+        
         whr.Option(9) := 2048  ; 强制使用 UTF-8
         whr.Option(6) := false ; 禁用重定向
         
