@@ -31,7 +31,7 @@ controlHight:=25
 winHeightPx:=controlHight*dpiRatio
 bGColor:="000000"
 fontColor:="ffffff"
-ver:="1.0.0"
+ver:="1.1.0"
 fontSize:=12
 fontFamily:="微软雅黑"
 userLanguage:="zh-CN"
@@ -47,7 +47,7 @@ Menu, tray, add, 更新 | Ver %ver%, UpdateScrit
 Menu, tray, add, 反馈 | Issues, Issues
 ;Menu, tray, add, 暂停 | Pause, PauseScrit
 Menu, tray, add
-Menu, tray, add, 重置 | Reload, ReloadScrit
+Menu, tray, add, 重载 | Reload, ReloadScrit
 Menu, tray, add, 退出 | Exit, ExitScrit
 
 ; 创建白名单组
