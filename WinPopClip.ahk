@@ -140,15 +140,11 @@ ShowMainGui(perPosX,perPosY,preTime)
 GetSelectText()
 {
     global
-    ClipSaved := ClipBoardAll
-    ClipBoard := ""
-    Send, {CtrlDown}c
-    ClipWait 0.1, 1
-    Send, {CtrlUp}
-    selectText := ClipBoard
-    ClipBoard := ""
-    ClipBoard := ClipSaved
-    ClipSaved := ""
+    ; 保存选中的文本
+    Clipboard := ""  ; 清空剪贴板
+    Send, ^c  ; 发送复制命令
+    ClipWait, 0.5  ; 等待剪贴板更新
+    selectText := Clipboard  ; 保存选中的文本
     
     ; 处理协议地址
     linkText := ""
@@ -258,15 +254,17 @@ Copy:
     Gui, Destroy
     WinActivate, ahk_id %win%
     WinWaitActive, ahk_id %win%
-    ClipBoard:=""
-    ClipBoard:=selectText
+    
+    ; 直接设置剪贴板内容
+    Clipboard := selectText
+    
     If (FileExist(SyncPath))
     {
         FileSetAttrib, -R, %SyncPath%\WinPopclip
         FileDelete, %SyncPath%\WinPopclip
         FileAppend,
         (
-            %selectText%
+%selectText%
         ), %SyncPath%\WinPopclip
     }
 Return
