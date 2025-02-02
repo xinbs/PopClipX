@@ -9,6 +9,8 @@ Windows 下的 PopClip，基于 AutoHotkey 实现。
 - 支持 DeepSeek 翻译（中英互译）
 - 支持白名单应用配置
 
+![PopClipX 截图](PopClipX.png)
+
 ## 使用方法
 
 1. 下载并安装 [AutoHotkey](https://www.autohotkey.com/)
