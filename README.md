@@ -12,16 +12,27 @@ Windows 下的 PopClip，基于 AutoHotkey 实现。
 - 支持 DeepSeek 文本改写（专业语气）
 - 支持 DeepSeek 英语语法检查
 - 支持白名单应用配置
+- 同时支持 AutoHotkey v1 和 v2 版本
 
 ![PopClipX 截图](PopClipX.png)
 
 ## 使用方法
 
-1. 下载并安装 [AutoHotkey](https://www.autohotkey.com/)
+1. 下载并安装 AutoHotkey
+   - 对于 v1 版本：下载 [AutoHotkey v1](https://www.autohotkey.com/)
+   - 对于 v2 版本：下载 [AutoHotkey v2](https://www.autohotkey.com/v2/)
 2. 下载本项目
 3. 复制 `config.ini.example` 为 `config.ini`
 4. 配置 DeepSeek API Key（可选，用于翻译、问答、改写和语法检查功能）
-5. 运行 `PopClipX.ahk`
+5. 根据你安装的 AutoHotkey 版本选择运行：
+   - AutoHotkey v1：运行 `PopClipX.ahk`
+   - AutoHotkey v2：运行 `PopClipX_V2.ahk`
+
+## 版本说明
+
+本项目提供两个版本的脚本：
+- `PopClipX.ahk`：适用于 AutoHotkey v1 版本
+- `PopClipX_V2.ahk`：适用于 AutoHotkey v2 版本，完全重写的新版本，功能与 v1 版本相同
 
 ## 配置说明
 
