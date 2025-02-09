@@ -140,8 +140,6 @@ IsActiveWhiteList() {
     procName := WinGetProcessName("A")
     procNameLower := StrLower(procName)
     result := whiteList.Count > 0 ? whiteList.Has(procNameLower) : true  ; 如果白名单为空，则允许所有进程
-    ;ToolTip "当前进程: " procName "`n白名单状态: " result
-    ;SetTimer () => ToolTip(), -1000
     return result
 }
 
@@ -209,10 +207,6 @@ GetSelectText() {
     A_Clipboard := ""
     Sleep 100
     
-    ; 添加调试信息
-    ToolTip "正在复制选中文本..."
-    SetTimer () => ToolTip(), -1000
-    
     Send "^c"
     if !ClipWait(0.5) {
         A_Clipboard := savedClipboard
@@ -223,10 +217,6 @@ GetSelectText() {
         return false
     }
     selectText := A_Clipboard
-    
-    ; 添加调试信息
-    ToolTip "已复制文本: " SubStr(selectText, 1, 50) "..."
-    SetTimer () => ToolTip(), -1000
     
     linkText := ""
     linkButton := "🔗"
@@ -332,10 +322,6 @@ WatchMouse() {
     global mainGui, isPopClipXActive, winTitle
     static watchCount := 0
     
-    watchCount++
-    ToolTip "WatchMouse运行中... 第" watchCount "次"
-    SetTimer () => ToolTip(), -200
-    
     if !mainGui {
         SetTimer () => WatchMouse(), 0
         return
@@ -355,8 +341,6 @@ WatchMouse() {
         SetTimer () => WatchMouse(), 0
         isPopClipXActive := false
         mainGui.Destroy()
-        ToolTip "工具栏已关闭"
-        SetTimer () => ToolTip(), -1000
     }
 }
 
